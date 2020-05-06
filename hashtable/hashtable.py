@@ -18,7 +18,8 @@ class HashTable:
     """
     def __init__(self, capacity=8):
         self.capacity = capacity
-        self.storage = [None] * capacity
+        self.storage = [None] * capacity  # [None, None, None...]
+        self.size = 0
 
     def fnv1(self, key):
         """
@@ -30,9 +31,10 @@ class HashTable:
         prime = 1099511628211
 
         key_bytes = key.encode()
+
         for byte in key_bytes:
-            hash *= prime
             hash ^= byte
+            hash *= prime
         return hash
 
     def djb2(self, key):
@@ -60,7 +62,21 @@ class HashTable:
         """
         index = self.hash_index(key)
         entry = HashTableEntry(key, value)
-        self.storage[index] = entry
+        if self.storage[index] is None:
+            self.size += 1
+            self.storage[index] = entry
+            self.resize()
+            return
+        node = self.storage[index]
+        while node.next is not None and node.key != key:
+            node = node.next
+        if node.key == key:
+            node.value = value
+            return
+        self.size += 1
+        node.next = entry
+        self.resize()
+
 
     def delete(self, key):
         """
@@ -71,7 +87,23 @@ class HashTable:
         Implement this.
         """
         index = self.hash_index(key)
-        self.storage[index] = None
+        node = self.storage[index]
+        if node is None:
+            return
+        previous_node = None
+        while node is not None:
+            if node.key == key:
+                if previous_node is None:
+                    self.storage[index] = node.next
+                    self.size -= 1
+                    return
+                else:
+                    previous_node.next = node.next
+                    self.size -= 1
+                    return
+            else:
+                previous_node = node
+                node = node.next
 
     def get(self, key):
         """
@@ -84,7 +116,12 @@ class HashTable:
         index = self.hash_index(key)
         if self.storage[index] is None:
             return None
-        return self.storage[index].value
+        node = self.storage[index]
+        while node.key != key:
+            if node.next is None:
+                return None
+            node = node.next
+        return node.value
 
     def resize(self):
         """
@@ -93,6 +130,21 @@ class HashTable:
 
         Implement this.
         """
+        if self.size / self.capacity <= 0.7:
+            return
+        actual_size = self.size
+        self.capacity *= 2
+        old_storage = self.storage.copy()
+        self.storage = [None] * self.capacity
+        for node in old_storage:
+            if node is None:
+                continue
+            while node.next is not None:
+                # TODO take care of the current node and set the next node
+                self.put(node.key, node.value)
+                node = node.next
+            self.put(node.key, node.value)
+            self.size = actual_size
 
 if __name__ == "__main__":
 
@@ -103,21 +155,21 @@ if __name__ == "__main__":
     ht.put("line_3", "Linked list saves the day!")
     print("")
 
-    # # Test storing beyond capacity
-    # print(ht.get("line_1"))
-    # print(ht.get("line_2"))
-    # print(ht.get("line_3"))
+    # Test storing beyond capacity
+    print(ht.get("line_1"))
+    print(ht.get("line_2"))
+    print(ht.get("line_3"))
 
-    # # Test resizing
-    # old_capacity = len(ht.storage)
-    # ht.resize()
-    # new_capacity = len(ht.storage)
-    #
-    # print(f"\nResized from {old_capacity} to {new_capacity}.\n")
-    #
-    # # Test if data intact after resizing
-    # print(ht.get("line_1"))
-    # print(ht.get("line_2"))
-    # print(ht.get("line_3"))
-    #
-    # print("")
+    # Test resizing
+    old_capacity = len(ht.storage)
+    ht.resize()
+    new_capacity = len(ht.storage)
+
+    print(f"\nResized from {old_capacity} to {new_capacity}.\n")
+
+    # Test if data intact after resizing
+    print(ht.get("line_1"))
+    print(ht.get("line_2"))
+    print(ht.get("line_3"))
+
+    print("")
