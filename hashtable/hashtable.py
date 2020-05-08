@@ -140,7 +140,6 @@ class HashTable:
             if node is None:
                 continue
             while node.next is not None:
-                # TODO take care of the current node and set the next node
                 self.put(node.key, node.value)
                 node = node.next
             self.put(node.key, node.value)
